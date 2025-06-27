@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/emoprince/companion-module-barco-series4#readme",
   "dependencies": {
-    "@companion-module/base": "^4.0.0"
+    "@companion-module/base": "^3.2.0"
   },
   "devDependencies": {},
   "companion": {
