@@ -21,7 +21,7 @@ instance.prototype.init = function () {
 		self.status(self.STATUS_UNKNOWN);
 
 		if (self.config.host !== undefined) {
-				self.tcp = new tcp(self.config.host, '43728');
+				self.tcp = new tcp(self.config.host, '43731');
 
 				self.tcp.on('status_change', function (status, message) {
 						self.status(status, message);
@@ -43,7 +43,7 @@ instance.prototype.updateConfig = function (config) {
 		}
 
 		if (self.config.host !== undefined) {
-				self.tcp = new tcp(self.config.host, '43728');
+				self.tcp = new tcp(self.config.host, '43731');
 
 				self.tcp.on('status_change', function (status, message) {
 						self.status(status, message);
@@ -79,8 +79,8 @@ instance.prototype.config_fields = function () {
 						id: 'port',
 						label: 'Portnumber',
 						width: 6,
-						default: '43728',
-						choices: [{ label: 'Series 2, 43728', id: '43728'}]
+						default: '43731',
+						choices: [{ label: 'Series 4, 43731', id: '43731'}]
 				}
 		];
 };
