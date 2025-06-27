@@ -1,27 +1,29 @@
 {
-	"name": "barco-dp",
-	"version": "1.1.3",
+	"name": "companion-module-barco-series4",
+	"version": "1.0.0",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Protocol",
-		"Projector"
+		"Projector",
+		"Barco",
+		"Series 4"
 	],
 	"manufacturer": "Barco",
-	"product": "DP Projector",
-	"shortname": "DP projector",
-	"description": "DP plugin for Companion",
+	"product": "Series 4 Projector",
+	"shortname": "Series 4",
+	"description": "Control plugin for Barco Series 4 projectors using Bitfocus Companion",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"author": "Jeffrey Davidsz <jeffrey.davidsz@vicreo.eu>",
+	"author": "Laurence Edward Wee <laurenceedwardwee@gmail.com>",
 	"license": "MIT",
-	"homepage": "https://github.com/bitfocus/companion-module-barco-dp#readme",
+	"homepage": "https://github.com/emoprince/companion-module-barco-series4#readme",
 	"bugs": {
-		"url": "https://github.com/bitfocus/companion-module-barco-dp/issues"
+		"url": "https://github.com/emoprince/companion-module-barco-series4/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-barco-dp.git"
+		"url": "git+https://github.com/emoprince/companion-module-barco-series4.git"
 	}
 }
