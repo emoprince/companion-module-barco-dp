@@ -1,29 +1,35 @@
 {
-	"name": "companion-module-barco-series4",
-	"version": "1.0.0",
-	"api_version": "1.0.0",
-	"keywords": [
-		"Protocol",
-		"Projector",
-		"Barco",
-		"Series 4"
-	],
-	"manufacturer": "Barco",
-	"product": "Series 4 Projector",
-	"shortname": "Series 4",
-	"description": "Control plugin for Barco Series 4 projectors using Bitfocus Companion",
-	"main": "module.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"author": "Laurence Edward Wee <laurenceedwardwee@gmail.com>",
-	"license": "MIT",
-	"homepage": "https://github.com/emoprince/companion-module-barco-series4#readme",
-	"bugs": {
-		"url": "https://github.com/emoprince/companion-module-barco-series4/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/emoprince/companion-module-barco-series4.git"
-	}
+  "name": "companion-module-barco-series4",
+  "version": "1.0.0",
+  "description": "Control plugin for Barco Series 4 projectors using Bitfocus Companion",
+  "main": "index.js",
+  "author": "Laurence Edward Wee <laurenceedwardwee@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "Companion",
+    "Projector",
+    "Barco",
+    "Series 4",
+    "TCP"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emoprince/companion-module-barco-series4.git"
+  },
+  "bugs": {
+    "url": "https://github.com/emoprince/companion-module-barco-series4/issues"
+  },
+  "homepage": "https://github.com/emoprince/companion-module-barco-series4#readme",
+  "dependencies": {
+    "@companion-module/base": "^4.0.0"
+  },
+  "devDependencies": {},
+  "companion": {
+    "type": "instance",
+    "name": "Barco Series 4 Projector",
+    "shortname": "Series 4",
+    "manufacturer": "Barco",
+    "product": "Series 4 Projector",
+    "version": "1.0.0"
+  }
 }
