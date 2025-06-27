@@ -24,6 +24,6 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/emoprince/companion-module-barco-series4.git"
+		"url": "https://github.com/emoprince/companion-module-barco-series4.git"
 	}
 }
