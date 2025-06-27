@@ -1,245 +1,222 @@
-var instance_skel = require('../../instance_skel');
-var tcp = require('../../tcp');
-var debug;
-var log;
+const { InstanceBase, TCPHelper, runEntrypoint, Regex } = require('@companion-module/base')
 
-exports.id = 'barco-series4';
-exports.name = 'Barco Series 4 Projector';
+class BarcoSeries4Instance extends InstanceBase {
+  constructor(internal) {
+    super(internal)
+    this.tcp = null
+  }
 
-function instance(system, id, config) {
-	var self = this;
+  async init(config) {
+    this.config = config
+    this.updateStatus('connecting')
 
-	// super-constructor
-	instance_skel.apply(this, arguments);
-	self.actions(); // export actions
-	return self;
+    if (this.tcp) {
+      this.tcp.destroy()
+    }
+
+    if (this.config.host) {
+      this.tcp = new TCPHelper(this.config.host, this.config.port || 43731)
+
+      this.tcp.on('status_change', (status, message) => {
+        this.updateStatus(status, message)
+      })
+
+      this.tcp.on('error', (err) => {
+        this.log('error', 'TCP Error: ' + err.message)
+      })
+
+      this.tcp.on('connect', () => {
+        this.updateStatus('ok')
+      })
+    }
+
+    this.initActions()
+  }
+
+  async destroy() {
+    if (this.tcp) {
+      this.tcp.destroy()
+    }
+  }
+
+  async configUpdated(config) {
+    this.config = config
+    await this.init(config)
+  }
+
+  getConfigFields() {
+    return [
+      {
+        type: 'textinput',
+        id: 'host',
+        label: 'Target IP',
+        width: 6,
+        default: '192.168.0.100',
+        regex: Regex.IP
+      },
+      {
+        type: 'number',
+        id: 'port',
+        label: 'Port',
+        width: 6,
+        default: 43731
+      }
+    ]
+  }
+
+  initActions() {
+    this.setActionDefinitions({
+      lamp: {
+        name: 'Lamp control',
+        options: [
+          {
+            type: 'dropdown',
+            label: 'On/Off',
+            id: 'lamp',
+            default: 'lamp_on',
+            choices: [
+              { id: 'lamp_on', label: 'Lamp On' },
+              { id: 'lamp_off', label: 'Lamp Off' },
+            ],
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = this.getCommandValue(Buffer.from([0x00, 0x03, 0x02, 0x76, 0x1a]), options.lamp === 'lamp_on' ? '1' : '0')
+          this.sendCommand(cmd)
+        },
+      },
+      shutter: {
+        name: 'Shutter',
+        options: [
+          {
+            type: 'dropdown',
+            label: 'Open/Close',
+            id: 'shutter',
+            default: 'shutter_close',
+            choices: [
+              { id: 'shutter_open', label: 'Open' },
+              { id: 'shutter_close', label: 'Close' },
+            ],
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = options.shutter === 'shutter_open'
+            ? Buffer.from([0xfe, 0x00, 0x22, 0x42, 0x00, 0x64, 0xff])
+            : Buffer.from([0xfe, 0x00, 0x23, 0x42, 0x00, 0x65, 0xff])
+          this.sendCommand(cmd)
+        },
+      },
+      lensShift: {
+        name: 'Lens Shift',
+        options: [
+          {
+            type: 'dropdown',
+            label: 'Direction',
+            id: 'side',
+            default: '0',
+            choices: [
+              { id: '0', label: 'Up' },
+              { id: '1', label: 'Down' },
+              { id: '2', label: 'Left' },
+              { id: '3', label: 'Right' },
+            ],
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = this.getCommandValue(Buffer.from([0xf4, 0x81]), options.side)
+          this.sendCommand(cmd)
+        },
+      },
+      lensZoom: {
+        name: 'Lens Zoom',
+        options: [
+          {
+            type: 'dropdown',
+            label: 'Zoom',
+            id: 'zoom',
+            default: '0',
+            choices: [
+              { id: '0', label: 'Zoom In' },
+              { id: '1', label: 'Zoom Out' },
+            ],
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = this.getCommandValue(Buffer.from([0xf4, 0x82]), options.zoom)
+          this.sendCommand(cmd)
+        },
+      },
+      lensFocus: {
+        name: 'Lens Focus',
+        options: [
+          {
+            type: 'dropdown',
+            label: 'Focus',
+            id: 'focus',
+            default: '0',
+            choices: [
+              { id: '0', label: 'Near' },
+              { id: '1', label: 'Far' },
+            ],
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = this.getCommandValue(Buffer.from([0xf4, 0x83]), options.focus)
+          this.sendCommand(cmd)
+        },
+      },
+      macro: {
+        name: 'Execute Macro',
+        options: [
+          {
+            type: 'textinput',
+            label: 'Macro Name',
+            id: 'macro',
+          },
+        ],
+        callback: ({ options }) => {
+          const cmd = this.getCommandValue(Buffer.concat([Buffer.from([0xe8, 0x81]), Buffer.from(options.macro)]), null)
+          this.sendCommand(cmd)
+        },
+      },
+    })
+  }
+
+  getCommandValue(command, parameter) {
+    let checksum = 0
+    command.forEach((b) => (checksum += b))
+
+    if (parameter !== null) {
+      const pBuffer = Buffer.from([parseInt(parameter)])
+      pBuffer.forEach((b) => (checksum += b))
+      checksum = checksum % 256
+
+      return Buffer.concat([
+        Buffer.from([0xfe, 0x00]),
+        command,
+        pBuffer,
+        Buffer.from([checksum]),
+        Buffer.from([0xff]),
+      ])
+    } else {
+      checksum = checksum % 256
+      return Buffer.concat([
+        Buffer.from([0xfe, 0x00]),
+        command,
+        Buffer.from([0x00]),
+        Buffer.from([checksum]),
+        Buffer.from([0xff]),
+      ])
+    }
+  }
+
+  sendCommand(cmd) {
+    if (this.tcp && this.tcp.isConnected) {
+      this.tcp.send(cmd)
+    } else {
+      this.log('warn', 'TCP not connected')
+    }
+  }
 }
 
-instance.prototype.init = function () {
-	var self = this;
-
-	debug = self.debug;
-	log = self.log;
-
-	self.status(self.STATUS_UNKNOWN);
-
-	if (self.config.host !== undefined) {
-		self.tcp = new tcp(self.config.host, self.config.port || '43731');
-
-		self.tcp.on('status_change', function (status, message) {
-			self.status(status, message);
-			self.log('info', `TCP connection status: ${message}`);
-		});
-
-		self.tcp.on('error', function () {
-			// Ignore
-		});
-	}
-};
-
-instance.prototype.updateConfig = function (config) {
-	var self = this;
-	self.config = config;
-
-	if (self.tcp !== undefined) {
-		self.tcp.destroy();
-		delete self.tcp;
-	}
-
-	if (self.config.host !== undefined) {
-		self.tcp = new tcp(self.config.host, self.config.port || '43731');
-
-		self.tcp.on('status_change', function (status, message) {
-			self.status(status, message);
-			self.log('info', `TCP connection status: ${message}`);
-		});
-
-		self.tcp.on('error', function () {
-			// Ignore
-		});
-	}
-};
-
-// Return config fields for web config
-instance.prototype.config_fields = function () {
-	var self = this;
-	return [
-		{
-			type: 'text',
-			id: 'info',
-			width: 12,
-			label: 'Information',
-			value: 'This module is for Barco Series 4 projectors (default port 43731)'
-		},
-		{
-			type: 'textinput',
-			id: 'host',
-			label: 'Target IP',
-			width: 6,
-			default: '192.168.0.100',
-			regex: self.REGEX_IP
-		},
-		{
-			type: 'dropdown',
-			id: 'port',
-			label: 'Portnumber',
-			width: 6,
-			default: '43731',
-			choices: [{ label: 'Series 4 - Port 43731', id: '43731' }]
-		}
-	];
-};
-
-// When module gets deleted
-instance.prototype.destroy = function () {
-	var self = this;
-
-	if (self.tcp !== undefined) {
-		self.tcp.destroy();
-	}
-	debug("destroy", self.id);
-};
-
-instance.prototype.actions = function (system) {
-	var self = this;
-
-	var actions = {
-		'lamp': {
-			label: 'Lamp control',
-			options: [{
-				type: 'dropdown',
-				label: 'on/off',
-				id: 'lamp',
-				default: 'lamp_on',
-				choices: [{ label: 'lamp on', id: 'lamp_on' }, { label: 'lamp off', id: 'lamp_off' }]
-			}]
-		},
-		'shutter': {
-			label: 'Shutter option 1',
-			options: [{
-				type: 'dropdown',
-				label: 'open/close',
-				id: 'shutter',
-				default: 'shutter_close',
-				choices: [{ label: 'shutter close', id: 'shutter_close' }, { label: 'shutter open', id: 'shutter_open' }]
-			}]
-		},
-		'lensShift': {
-			label: 'Shift the lens',
-			options: [{
-				type: 'dropdown',
-				id: 'side',
-				label: 'shift',
-				choices: [{ label: 'Up', id: '0' }, { label: 'Down', id: '1' }, { label: 'Left', id: '2' }, { label: 'Right', id: '3' }],
-				default: '0'
-			}]
-		},
-		'lensZoom': {
-			label: 'Zoom the lens',
-			options: [{
-				type: 'dropdown',
-				id: 'zoom',
-				label: 'zoom',
-				choices: [{ label: 'Zoom in', id: '0' }, { label: 'Zoom out', id: '1' }],
-				default: '0'
-			}]
-		},
-		'lensFocus': {
-			label: 'Focus the lens',
-			options: [{
-				type: 'dropdown',
-				id: 'focus',
-				label: 'focus',
-				choices: [{ label: 'Near', id: '0' }, { label: 'Far', id: '1' }],
-				default: '0'
-			}]
-		},
-		'macro': {
-			label: 'Execute macro',
-			options: [{
-				label: 'Macro name',
-				type: 'textinput',
-				id: 'macro'
-			}]
-		}
-	};
-
-	self.setActions(actions);
-};
-
-instance.prototype.action = function (action) {
-	var self = this;
-	var id = action.action;
-	var opt = action.options;
-	var cmd;
-
-	getCommandValue = function (command, parameter) {
-		let checksum = 0;
-
-		command.forEach(function (item) {
-			checksum += item;
-		});
-
-		if (parameter !== null) {
-			let pBuffer = Buffer.from([parseInt(parameter)]);
-			pBuffer.forEach(function (item) {
-				checksum += item;
-			});
-			checksum = checksum % 256;
-
-			return Buffer.concat([
-				Buffer.from([0xFE, 0x00]),
-				command,
-				pBuffer,
-				Buffer.from([checksum]),
-				Buffer.from([0xFF])
-			]);
-		} else {
-			checksum = checksum % 256;
-
-			return Buffer.concat([
-				Buffer.from([0xFE, 0x00]),
-				command,
-				Buffer.from([0x00]),
-				Buffer.from([checksum]),
-				Buffer.from([0xFF])
-			]);
-		}
-	};
-
-	switch (id) {
-		case 'lamp':
-			cmd = getCommandValue(Buffer.from([0x00, 0x03, 0x02, 0x76, 0x1a]), opt.lamp === 'lamp_on' ? '1' : '0');
-			break;
-
-		case 'shutter':
-			cmd = opt.shutter === 'shutter_open'
-				? Buffer.from([0xfe, 0x00, 0x22, 0x42, 0x00, 0x64, 0xff])
-				: Buffer.from([0xfe, 0x00, 0x23, 0x42, 0x00, 0x65, 0xff]);
-			break;
-
-		case 'lensShift':
-			cmd = getCommandValue(Buffer.from([0xf4, 0x81]), opt.side);
-			break;
-
-		case 'lensZoom':
-			cmd = getCommandValue(Buffer.from([0xf4, 0x82]), opt.zoom);
-			break;
-
-		case 'lensFocus':
-			cmd = getCommandValue(Buffer.from([0xf4, 0x83]), opt.focus);
-			break;
-
-		case 'macro':
-			cmd = getCommandValue(Buffer.concat([Buffer.from([0xe8, 0x81]), Buffer.from(opt.macro)]), null);
-			break;
-	}
-
-	if (cmd !== undefined && self.tcp !== undefined) {
-		debug('sending', cmd, 'to', self.tcp.host);
-		self.tcp.send(cmd);
-	}
-};
-
-instance_skel.extendedBy(instance);
-exports = module.exports = instance;
+runEntrypoint(BarcoSeries4Instance)
