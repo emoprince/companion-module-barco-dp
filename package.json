@@ -12,7 +12,7 @@
 	"product": "Series 4 Projector",
 	"shortname": "Series 4",
 	"description": "Control plugin for Barco Series 4 projectors using Bitfocus Companion",
-	"main": "index.js",
+	"main": "module.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
